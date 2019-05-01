@@ -1,0 +1,55 @@
+version: "3.1"
+
+services:
+  db:
+    image: mariadb:latest
+    deploy:
+      replicas: 1
+    environment:
+      MYSQL_ROOT_PASSWORD_FILE: /run/secrets/wp_mysql_root_password
+      MYSQL_PASSWORD_FILE: /run/secrets/wp_mysql_password
+      MYSQL_USER: wordpress
+      MYSQL_DATABASE: wordpress
+    volumes:
+      - mydata:/var/lib/mysql
+    networks:
+      - network
+    secrets:
+      - wp_mysql_password
+      - wp_mysql_root_password
+
+  wordpress:
+    image: wordpress:latest
+    deploy:
+      replicas: 1
+    depends_on:
+      - db
+    volumes:
+      - wpdata:/var/www/html
+    secrets:
+      - source: wp_mysql_password
+        target: wp_db_password
+        mode: 0400
+    environment:
+      WORDPRESS_DB_USER: "wordpress"
+      WORDPRESS_DB_PASSWORD_FILE: "/run/secrets/wp_db_password"
+      WORDPRESS_DB_HOST: "db:3306"
+      WORDPRESS_DB_NAME: "wordpress"
+    ports:
+      - 30000:80
+    networks:
+      - network
+
+volumes:
+  mydata:
+  wpdata:
+
+secrets:
+  wp_mysql_password:
+    external: true
+  wp_mysql_root_password:
+    external: true
+
+networks:
+  network:
+    driver: overlay
